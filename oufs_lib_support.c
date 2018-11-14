@@ -546,3 +546,11 @@ int comparator(const void* p, const void* q){
   char* b = *(char**)q;
   return strcmp(a, b); //Sorts alphabetically
 }
+
+// Project 4 Below
+//-----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
+int oufs_touch(char* cwd, char* path){
+
+  return 0;
+}

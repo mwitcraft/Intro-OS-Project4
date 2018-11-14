@@ -16,6 +16,9 @@ int oufs_mkdir(char *cwd, char *path);
 int oufs_list(char *cwd, char *path);
 int oufs_rmdir(char *cwd, char *path);
 
+// Project 4
+int oufs_touch(char* cwd, char* path);
+
 // Helper functions in oufs_lib_support.c
 void oufs_clean_directory_block(INODE_REFERENCE self, INODE_REFERENCE parent, BLOCK *block);
 void oufs_clean_directory_entry(DIRECTORY_ENTRY *entry);
