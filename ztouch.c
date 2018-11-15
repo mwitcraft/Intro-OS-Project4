@@ -16,13 +16,14 @@ int main(int argc, char** argv) {
 
     // Make the specified directory
     // oufs_mkdir(cwd, argv[1]);
+    oufs_touch(cwd, argv[1]);
 
     // Clean up
     vdisk_disk_close();
 
   }else{
     // Wrong number of parameters
-    fprintf(stderr, "Usage: zmkdir <dirname>\n");
+    fprintf(stderr, "Usage: ztouch <dirname>\n");
   }
 
 }

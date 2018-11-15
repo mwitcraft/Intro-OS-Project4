@@ -35,12 +35,8 @@ int main(int argc, char** argv){
 
 int initialize_disk(){
 
-  char diskName[MAX_PATH_LENGTH];
-  char cwd[MAX_PATH_LENGTH];
-  oufs_get_environment(cwd, diskName);
-
     // Creates a virtual disk with name 'vdisk1'
-    if(vdisk_disk_open(diskName) != 0)
+    if(vdisk_disk_open("vdisk1") != 0)
       return -1;
 
     // Steps through all bytes in disk and sets to 0

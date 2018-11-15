@@ -31,6 +31,7 @@ int oufs_find_open_bit(unsigned char value);
 int get_inode_reference_from_path(char* path);
 int get_inode_reference_from_path_helper(INODE_REFERENCE parentInodeReference, char* name);
 int comparator(const void* p, const void* q);
+// INODE_REFERENCE oufs_find_directory_element(INODE* inode, char* name);
 
 
 // PROJECT 4 ONLY
