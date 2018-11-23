@@ -15,8 +15,10 @@ int main(int argc, char** argv) {
     vdisk_disk_open(disk_name);
 
     // Make the specified directory
-    // oufs_mkdir(cwd, argv[1]);
-    oufs_touch(cwd, argv[1]);
+    OUFILE* oufile = malloc(sizeof(*oufile));
+    oufile = oufs_fopen(cwd, argv[1], 't');
+    printf("OUFILE inode reference: %i\n", oufile->inode_reference);
+    free(oufile);
 
     // Clean up
     vdisk_disk_close();

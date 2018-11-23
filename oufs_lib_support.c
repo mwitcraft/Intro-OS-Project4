@@ -439,6 +439,11 @@ int oufs_list(char *cwd, char *path) {
     fprintf(stderr, "zfilez error\n");
   }
 
+  if(child == UNALLOCATED_INODE){
+    fprintf(stderr, "zfilez error: directory does not exist\n");
+    return -1;
+  }
+
   char *entryNames[DIRECTORY_ENTRIES_PER_BLOCK];
   char *directoryNames[DIRECTORY_ENTRIES_PER_BLOCK];
   for (int i = 0; i < DIRECTORY_ENTRIES_PER_BLOCK; ++i) {
@@ -749,13 +754,13 @@ int oufs_mkdir(char *cwd, char *path) {
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
 
-int oufs_touch(char *cwd, char *path) {
+OUFILE* oufs_fopen(char *cwd, char *path, char mode) {
   INODE_REFERENCE parent;
   INODE_REFERENCE child;
   char local_name[MAX_PATH_LENGTH];
   int ret;
   if ((ret = oufs_find_file(cwd, path, &parent, &child, local_name)) < -1) {
-    return -1;
+    return NULL;
   }
 
   // Parent exists and child does not, create file
@@ -763,7 +768,7 @@ int oufs_touch(char *cwd, char *path) {
     // Get parent inode
     INODE parentInode;
     if (oufs_read_inode_by_reference(parent, &parentInode) != 0) {
-      return -1;
+      return NULL;
     }
     // If parent is a directory
     if (parentInode.type == IT_DIRECTORY) {
@@ -815,11 +820,16 @@ int oufs_touch(char *cwd, char *path) {
         }
       }
       oufs_write_inode_by_reference(parent, &parentInode);
+      OUFILE *file = malloc(sizeof(*file));
+      file->inode_reference = childLocation;
+      file->mode = mode;
+      file->offset = 0;
+      return file;
     }
     // Parent is not a directory, throw error
     else {
       fprintf(stderr, "ztouch error: parent is not a directory\n");
-      return -1;
+      return NULL;
     }
   }
   // Parent and child exist
@@ -827,23 +837,89 @@ int oufs_touch(char *cwd, char *path) {
     // Check if child is a file
     INODE childInode;
     if (oufs_read_inode_by_reference(child, &childInode) != 0) {
-      return -1;
+      return NULL;
     }
     // If child is file, do nothing
     if (childInode.type == IT_FILE) {
-      return 0;
+      //TODO: return the oufile
+      OUFILE *file = malloc(sizeof(*file));
+      file->inode_reference = child;
+      file->mode = mode;
+      file->offset = childInode.size;
+      return file;
     }
     // If child is directory, throw error
     else {
       fprintf(stderr, "ztouch error: child exists and is not a file\n");
-      return -1;
+      return NULL;
     }
 
   }
   // Parent does not exist, throw error
   else {
     fprintf(stderr, "ztouch error: parent does not exist\n");
-    return -1;
+    return NULL;
   }
-  return 0;
+  return NULL;
+}
+
+int oufs_fwrite(OUFILE *fp, unsigned char* buf, int len){
+  INODE_REFERENCE file_inode_reference = fp->inode_reference;
+  INODE file_inode;
+  oufs_read_inode_by_reference(file_inode_reference, &file_inode);
+  char mode = fp->mode;
+  //Care about offset
+  if(mode == 'a'){
+    //Check if size of inode is 0, if it is, just write everything in the buffer to it.
+    if(file_inode.size == 0){
+      printf("File is empty\n");
+      //Allocate new data block
+      BLOCK_REFERENCE data_block_reference = oufs_allocate_new_block();
+      BLOCK data_block;
+      vdisk_read_block(data_block_reference, &data_block);
+
+      //Write buf to that data block
+      //TODO: if length is greater than BLOCK_SIZE, must allocate a new block
+      int index = 0;
+      for(index = 0; index < len; ++index){
+        data_block.data.data[index] = buf[index];
+      }
+
+      //Store the data block reference inside the inode
+      for(int i = 0; i < BLOCKS_PER_INODE; ++i){
+        if(file_inode.data[i] == UNALLOCATED_BLOCK){
+          file_inode.data[i] = data_block_reference; 
+          break;
+        }
+      }
+      file_inode.size += len;
+      fp->offset =  file_inode.size; 
+
+      //Mark data block as allocated inside master block (already done in oufs_allocate_new_block())
+
+      //Write changes back to disk
+      oufs_write_inode_by_reference(file_inode_reference, &file_inode);
+      vdisk_write_block(data_block_reference, &data_block);
+    }
+  }
+  //Don't care about offset, will be writing from 0
+  if(mode == 'c'){
+    //Zero out all data blocks
+  }
+}
+
+int oufs_fread(OUFILE *fp, unsigned char* buf, int len){
+  INODE_REFERENCE file_inode_reference = fp->inode_reference;
+  INODE file_inode;
+  oufs_read_inode_by_reference(file_inode_reference, &file_inode);
+
+  for(int i = 0; i < BLOCKS_PER_INODE; ++i){
+    if(file_inode.data[i] != UNALLOCATED_BLOCK){
+
+    }
+    else{
+      break;
+    }
+  }
+
 }

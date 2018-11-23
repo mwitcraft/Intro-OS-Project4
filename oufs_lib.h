@@ -35,10 +35,11 @@ int comparator(const void* p, const void* q);
 
 
 // PROJECT 4 ONLY
-OUFILE* oufs_fopen(char *cwd, char *path, char *mode);
+OUFILE* oufs_fopen(char *cwd, char *path, char mode);
 void oufs_fclose(OUFILE *fp);
 int oufs_fwrite(OUFILE *fp, unsigned char * buf, int len);
 int oufs_fread(OUFILE *fp, unsigned char * buf, int len);
+int oufs_zmore(OUFILE *fp);
 int oufs_remove(char *cwd, char *path);
 int oufs_link(char *cwd, char *path_src, char *path_dst);
 
