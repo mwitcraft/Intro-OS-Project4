@@ -915,11 +915,14 @@ int oufs_fread(OUFILE *fp, unsigned char* buf, int len){
 
   for(int i = 0; i < BLOCKS_PER_INODE; ++i){
     if(file_inode.data[i] != UNALLOCATED_BLOCK){
-
+      BLOCK b;
+      vdisk_read_block(file_inode.data[i], &b);
+      for(int j = 0; j < BLOCK_SIZE; ++j){
+        printf("%c", b.data.data[j]);
+      }
     }
     else{
       break;
     }
   }
-
 }
