@@ -868,44 +868,64 @@ int oufs_fwrite(OUFILE *fp, unsigned char* buf, int len){
   INODE file_inode;
   oufs_read_inode_by_reference(file_inode_reference, &file_inode);
   char mode = fp->mode;
-  //Care about offset
-  if(mode == 'a'){
-    //Check if size of inode is 0, if it is, just write everything in the buffer to it.
-    if(file_inode.size == 0){
-      printf("File is empty\n");
-      //Allocate new data block
-      BLOCK_REFERENCE data_block_reference = oufs_allocate_new_block();
-      BLOCK data_block;
-      vdisk_read_block(data_block_reference, &data_block);
 
-      //Write buf to that data block
-      //TODO: if length is greater than BLOCK_SIZE, must allocate a new block
-      int index = 0;
-      for(index = 0; index < len; ++index){
-        data_block.data.data[index] = buf[index];
-      }
+  //If the file is from 'zcreate', 0 out the file and write from beginning, otherwise
+  //skip this step
+  if(mode == 'w'){
+    //Zero out all data blocks
 
-      //Store the data block reference inside the inode
-      for(int i = 0; i < BLOCKS_PER_INODE; ++i){
-        if(file_inode.data[i] == UNALLOCATED_BLOCK){
-          file_inode.data[i] = data_block_reference; 
-          break;
-        }
-      }
-      file_inode.size += len;
-      fp->offset =  file_inode.size; 
+    //Set file size equal to 0
+  }
 
-      //Mark data block as allocated inside master block (already done in oufs_allocate_new_block())
+  // 1. Determine if new data blocks need to be allocated
+  //    - Current number of blocks allocated can be found by:
+  //        size/256 = a
+  //        size%256 = b
+  //        if(b != 0)
+  //          numBlock = a + 1
+  //        else
+  //          numBlock = a
+  //    - Number of blocks needed after adding can be found by adding len and size
+  //        If that changes the number of blocks needed, then allocated more blocks
+  //  2. Use a for loop to step through buf
+  //    - When size + len % 256 = 0, add that final character to current block
+  //      then allocate a new block then start adding at the beginning of that block
+  //    - Continue until all characters in buf have been written
+  //  3. Write changes back to disk
 
-      //Write changes back to disk
-      oufs_write_inode_by_reference(file_inode_reference, &file_inode);
-      vdisk_write_block(data_block_reference, &data_block);
+
+
+
+
+
+
+  //Allocate new data block
+  BLOCK_REFERENCE data_block_reference = oufs_allocate_new_block();
+  BLOCK data_block;
+  vdisk_read_block(data_block_reference, &data_block);
+
+  //Write buf to that data block
+  //TODO: if length is greater than BLOCK_SIZE, must allocate a new block
+  int index = 0;
+  for(index = 0; index < len; ++index){
+    data_block.data.data[index] = buf[index];
+  }
+
+  //Store the data block reference inside the inode
+  for(int i = 0; i < BLOCKS_PER_INODE; ++i){
+    if(file_inode.data[i] == UNALLOCATED_BLOCK){
+      file_inode.data[i] = data_block_reference; 
+      break;
     }
   }
-  //Don't care about offset, will be writing from 0
-  if(mode == 'c'){
-    //Zero out all data blocks
-  }
+  file_inode.size += len;
+  fp->offset =  file_inode.size; 
+
+  //Mark data block as allocated inside master block (already done in oufs_allocate_new_block())
+
+  //Write changes back to disk
+  oufs_write_inode_by_reference(file_inode_reference, &file_inode);
+  vdisk_write_block(data_block_reference, &data_block);
 }
 
 int oufs_fread(OUFILE *fp, unsigned char* buf, int len){
