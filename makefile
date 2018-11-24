@@ -1,4 +1,4 @@
-all: format filez inspect mkdir rmdir touch append more create
+all: format filez inspect mkdir rmdir touch append more create link
 format:
 	gcc zformat.c oufs_lib_support.c vdisk.c -o zformat
 filez:
@@ -17,5 +17,7 @@ create:
 	gcc zcreate.c oufs_lib_support.c vdisk.c -o zcreate 
 more:
 	gcc zmore.c oufs_lib_support.c vdisk.c -o zmore
+link:
+	gcc zlink.c oufs_lib_support.c vdisk.c -o zlink
 clean:
 	rm zformat zfilez zinspect zmkdir zrmdir
