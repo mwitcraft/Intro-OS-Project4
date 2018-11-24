@@ -901,7 +901,7 @@ int oufs_fwrite(OUFILE *fp, unsigned char* buf, int len){
 
   //To know which data block to insert into, do offset / BLOCK_SIZE
   //To know where in the data block to insert into, do offset % BLOCK_SIZE
-  int offset = fp->offset;
+  int offset = file_inode.size;
   int data_block_index = offset / BLOCK_SIZE;
   // printf("Offset: %i\n", offset);
   // printf("data_block_index: %i\n", data_block_index);
@@ -1007,16 +1007,40 @@ int oufs_fread(OUFILE *fp, unsigned char* buf, int len){
   INODE file_inode;
   oufs_read_inode_by_reference(file_inode_reference, &file_inode);
 
-  for(int i = 0; i < BLOCKS_PER_INODE; ++i){
-    if(file_inode.data[i] != UNALLOCATED_BLOCK){
-      BLOCK b;
-      vdisk_read_block(file_inode.data[i], &b);
+  int num_data_blocks;
+  if(file_inode.size % BLOCK_SIZE == 0)
+    num_data_blocks = file_inode.size / BLOCK_SIZE;
+  else
+    num_data_blocks = file_inode.size / BLOCK_SIZE + 1;
+
+  for(int i = 0; i < num_data_blocks; ++i){
+    BLOCK b;
+    vdisk_read_block(file_inode.data[i], &b);
+    if(i == num_data_blocks - 1){
+      for(int j = 0; j < file_inode.size % BLOCK_SIZE; ++j){
+        printf("%c", b.data.data[j]);
+      }
+    } 
+    else{
       for(int j = 0; j < BLOCK_SIZE; ++j){
         printf("%c", b.data.data[j]);
       }
     }
-    else{
-      break;
-    }
   }
+
+
+
+
+
+  //   if(file_inode.data[i] != UNALLOCATED_BLOCK){
+  //     BLOCK b;
+  //     vdisk_read_block(file_inode.data[i], &b);
+  //     for(int j = 0; j < BLOCK_SIZE; ++j){
+  //       printf("%c", b.data.data[j]);
+  //     }
+  //   }
+  //   else{
+  //     break;
+  //   }
+  // }
 }

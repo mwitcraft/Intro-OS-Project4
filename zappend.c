@@ -27,6 +27,11 @@ int main(int argc, char** argv) {
       ++length;
     }
 
+    // for(int i = 0; i < length; ++i){
+    //   printf("%c", buf[i]);
+    // }
+
+    // printf("Length: %i\n", length);
     //Writes Buffer to file
     oufs_fwrite(oufile, buf, length);
     free(oufile);
