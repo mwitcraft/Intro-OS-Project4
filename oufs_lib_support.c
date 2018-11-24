@@ -893,7 +893,42 @@ int oufs_fwrite(OUFILE *fp, unsigned char* buf, int len){
   //    - Continue until all characters in buf have been written
   //  3. Write changes back to disk
 
+  //  1.
+  int full_size = file_inode.size + len;
+  int num_data_blocks;
+  int offset = fp->offset;
 
+  if((full_size % 256) != 0)
+    num_data_blocks = (full_size / 256) + 1;
+  else
+    num_data_blocks = full_size / 256;
+
+//---------------Getting block to write data to, allocating new one if necessary------------//
+  for(int i = 0; i < num_data_blocks; ++i){
+    BLOCK data_block;
+    BLOCK_REFERENCE data_block_reference = file_inode.data[i];
+    if(data_block_reference == UNALLOCATED_BLOCK){
+      data_block_reference = oufs_allocate_new_block();
+      vdisk_read_block(data_block_reference, &data_block);
+    }
+    else{
+      vdisk_read_block(file_inode.data[i], &data_block);
+    }
+//------------------------------------------------------------------------------------------//
+
+  }
+
+  // for(int i = 0; i < len; ++i){
+  //   for(int j = 0; j < num_data_blocks; ++j){
+  //     BLOCK data_block;
+  //     if(file_inode.data[j] == UNALLOCATED_BLOCK){
+  //       oufs_allocate_new_block(file_inode.data[j], &data_block);
+  //     }
+  //     else{
+  //       vdisk_read_block(file_inode.data[j], &data_block);
+  //     }
+  //   }
+  // }
 
 
 
