@@ -20,23 +20,16 @@ int main(int argc, char** argv) {
     //Steps through stdin and stores in buffer
     char c = fgetc(stdin);
     int length = 0;
-    unsigned char* buf;
+    unsigned char* buf = malloc(sizeof(char) * N_BLOCKS_IN_DISK * BLOCK_SIZE);
     while(c != EOF){
-      // printf("%c", c);
       buf[length] = c;
       c = fgetc(stdin);
       ++length;
     }
-    // printf("Length: %i\n", length);
-    // printf("Length of Buf: %i\n", strlen(buf));
-    // for(int i = 0; i < strlen(buf); ++i){
-      // printf("%c", buf[i]);
-    // }
 
     //Writes Buffer to file
     oufs_fwrite(oufile, buf, length);
     free(oufile);
-
     // Clean up
     vdisk_disk_close();
 

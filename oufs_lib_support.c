@@ -905,25 +905,27 @@ int oufs_fwrite(OUFILE *fp, unsigned char* buf, int len){
   int data_block_index = offset / BLOCK_SIZE;
   // printf("Offset: %i\n", offset);
   // printf("data_block_index: %i\n", data_block_index);
+  BLOCK data_block;
+  if(offset != 0) //If there is data present, load the data
+    vdisk_read_block(file_inode.data[data_block_index], &data_block);
 
   for(int i = 0; i < len; ++i){
-    BLOCK data_block;
     if(offset % BLOCK_SIZE == 0){ //At the end of a block, need to allocate new block
+      if(offset != 0)
+        vdisk_write_block(file_inode.data[data_block_index], &data_block); //Writes the full data block back to the disk
+
       data_block_index = offset / BLOCK_SIZE; //Gets the location in the inode where this block will be placed
       BLOCK_REFERENCE bf = oufs_allocate_new_block();
       file_inode.data[data_block_index] = bf; //Places the new data block in the inode
-      oufs_write_inode_by_reference(file_inode_reference, &file_inode); //Writes the inode back to the disk
+      // oufs_write_inode_by_reference(file_inode_reference, &file_inode); //Writes the inode back to the disk
+      // vdisk_read_block(file_inode.data[data_block_index], &data_block); //Reads the block 
     }
-    // printf("BEFORE WRITING: \n");
-    // printf("Offset: %i\n", offset);
-    // printf("data_block_index: %i\n", data_block_index);
-    vdisk_read_block(file_inode.data[data_block_index], &data_block);
     data_block.data.data[offset % BLOCK_SIZE] = buf[i];
-    vdisk_write_block(file_inode.data[data_block_index], &data_block);
-
     ++offset;
   }
-
+  file_inode.size += len;
+  oufs_write_inode_by_reference(file_inode_reference, &file_inode);
+  vdisk_write_block(file_inode.data[data_block_index], &data_block); 
 //   int full_size = file_inode.size + len;
 //   int num_used_data_blocks;
 //   int num_total_blocks;
