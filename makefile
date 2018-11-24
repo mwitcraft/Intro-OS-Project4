@@ -1,4 +1,4 @@
-all: format filez inspect mkdir rmdir touch append more
+all: format filez inspect mkdir rmdir touch append more create
 format:
 	gcc zformat.c oufs_lib_support.c vdisk.c -o zformat
 filez:
@@ -13,6 +13,8 @@ touch:
 	gcc ztouch.c oufs_lib_support.c vdisk.c -o ztouch 
 append:
 	gcc zappend.c oufs_lib_support.c vdisk.c -o zappend 
+create:
+	gcc zcreate.c oufs_lib_support.c vdisk.c -o zcreate 
 more:
 	gcc zmore.c oufs_lib_support.c vdisk.c -o zmore
 clean:

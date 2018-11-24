@@ -873,7 +873,23 @@ int oufs_fwrite(OUFILE *fp, unsigned char* buf, int len){
   //skip this step
   if(mode == 'w'){
     //Zero out all data blocks
-
+    BLOCK master;
+    vdisk_read_block(MASTER_BLOCK_REFERENCE, &master);
+    for(int i = 0; i < BLOCKS_PER_INODE; ++i){
+      if(file_inode.data[i] != UNALLOCATED_BLOCK){
+        BLOCK b;
+        vdisk_read_block(file_inode.data[i], &b);
+        for(int j = 0; j < BLOCK_SIZE; ++j){
+          b.data.data[j] = 0;
+        }
+        master.master.block_allocated_flag[file_inode.data[i] / 8] &= ~(1 << (file_inode.data[i] % 8));
+        file_inode.data[i] = UNALLOCATED_BLOCK;
+      }
+    }
+    file_inode.size = 0;
+    fp->offset = 0;
+    oufs_write_inode_by_reference(file_inode_reference, &file_inode);
+    vdisk_write_block(MASTER_BLOCK_REFERENCE, &master);
     //Set file size equal to 0
   }
 

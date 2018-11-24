@@ -16,7 +16,7 @@ int main(int argc, char** argv) {
 
     //Gets the file for writing
     OUFILE* oufile = malloc(sizeof(*oufile));
-    oufile = oufs_fopen(cwd, argv[1], 'a');
+    oufile = oufs_fopen(cwd, argv[1], 'w');
     //Steps through stdin and stores in buffer
     char c = fgetc(stdin);
     int length = 0;
