@@ -820,7 +820,7 @@ OUFILE* oufs_fopen(char *cwd, char *path, char mode) {
         }
       }
       oufs_write_inode_by_reference(parent, &parentInode);
-      OUFILE *file = malloc(sizeof(*file));
+      OUFILE *file = malloc(sizeof(OUFILE));
       file->inode_reference = childLocation;
       file->mode = mode;
       file->offset = 0;
@@ -842,7 +842,7 @@ OUFILE* oufs_fopen(char *cwd, char *path, char mode) {
     // If child is file, do nothing
     if (childInode.type == IT_FILE) {
       //TODO: return the oufile
-      OUFILE *file = malloc(sizeof(*file));
+      OUFILE *file = malloc(sizeof(OUFILE));
       file->inode_reference = child;
       file->mode = mode;
       file->offset = childInode.size;
@@ -901,15 +901,20 @@ int oufs_fwrite(OUFILE *fp, unsigned char* buf, int len){
   if(offset != 0) //If there is data present, load the data
     vdisk_read_block(file_inode.data[data_block_index], &data_block);
 
-  //Gets total number of blocks after adding buf 
+  //Gets what will be the total size of the file after writing
   int total_size = file_inode.size + len;
+  //If the size of the file is too big, shrink to max size available
+  if(total_size > (BLOCKS_PER_INODE * BLOCK_SIZE))
+    total_size = BLOCKS_PER_INODE * BLOCK_SIZE;
+
+  //Gets total number of blocks after adding buf 
   int num_data_blocks;
   if(total_size % BLOCK_SIZE == 0)
     num_data_blocks = total_size / BLOCK_SIZE;
   else
     num_data_blocks = total_size / BLOCK_SIZE + 1;
 
-  //Must always start at 0 
+  //Must always start at 0 for buf 
   int buf_index = 0;
   for(int i = file_inode.size; i < num_data_blocks * BLOCK_SIZE; ++i){
     if(offset % BLOCK_SIZE == 0){ //At the end of a block, need to allocate new block
@@ -933,8 +938,9 @@ int oufs_fwrite(OUFILE *fp, unsigned char* buf, int len){
       ++location;
     }
   }
+  //Write the changes back to the file
   vdisk_write_block(file_inode.data[data_block_index], &data_block);
-  file_inode.size += len;
+  file_inode.size = total_size;
   oufs_write_inode_by_reference(file_inode_reference, &file_inode);
   vdisk_write_block(file_inode.data[data_block_index], &data_block); 
 }
@@ -956,11 +962,13 @@ int oufs_fread(OUFILE *fp, unsigned char* buf, int len){
     if(i == num_data_blocks - 1){
       for(int j = 0; j < file_inode.size % BLOCK_SIZE; ++j){
         printf("%c", b.data.data[j]);
+        fflush(stdout);
       }
     } 
     else{
       for(int j = 0; j < BLOCK_SIZE; ++j){
         printf("%c", b.data.data[j]);
+        fflush(stdout);
       }
     }
   }

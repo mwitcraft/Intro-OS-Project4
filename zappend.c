@@ -20,11 +20,15 @@ int main(int argc, char** argv) {
     //Steps through stdin and stores in buffer
     char c = fgetc(stdin);
     int length = 0;
-    unsigned char* buf = malloc(sizeof(char) * N_BLOCKS_IN_DISK * BLOCK_SIZE);
+    unsigned char* buf = malloc(N_BLOCKS_IN_DISK * BLOCK_SIZE);
+    int i = 0;
     while(c != EOF){
       buf[length] = c;
       c = fgetc(stdin);
       ++length;
+      ++i;
+      if(i > N_BLOCKS_IN_DISK * BLOCK_SIZE)
+        break;
     }
 
     // for(int i = 0; i < length; ++i){
