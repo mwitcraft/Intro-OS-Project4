@@ -882,45 +882,21 @@ int oufs_fwrite(OUFILE *fp, unsigned char* buf, int len){
         for(int j = 0; j < BLOCK_SIZE; ++j){
           b.data.data[j] = 0;
         }
-        master.master.block_allocated_flag[file_inode.data[i] / 8] &= ~(1 << (file_inode.data[i] % 8));
+        master.master.block_allocated_flag[file_inode.data[i] / 8] &= ~(1 << (file_inode.data[i] % 8)); //Mark the data blocks as unallocated in the master allocation table
         file_inode.data[i] = UNALLOCATED_BLOCK;
       }
     }
     file_inode.size = 0;
     fp->offset = 0;
-    oufs_write_inode_by_reference(file_inode_reference, &file_inode);
-    vdisk_write_block(MASTER_BLOCK_REFERENCE, &master);
-    //Set file size equal to 0
+    oufs_write_inode_by_reference(file_inode_reference, &file_inode); //Write changes back to file
+    vdisk_write_block(MASTER_BLOCK_REFERENCE, &master); //^^
   }
-
-  // 1. Determine if new data blocks need to be allocated
-  //    - Current number of blocks allocated can be found by:
-  //        size/256 = a
-  //        size%256 = b
-  //        if(b != 0)
-  //          numBlock = a + 1
-  //        else
-  //          numBlock = a
-  //    - Number of blocks needed after adding can be found by adding len and size
-  //        If that changes the number of blocks needed, then allocated more blocks
-  //  2. Use a for loop to step through buf
-  //    - When size + len % 256 = 0, add that final character to current block
-  //      then allocate a new block then start adding at the beginning of that block
-  //    - Continue until all characters in buf have been written
-  //  3. Write changes back to disk
-
-  // 1. Calculate number of new data blocks needed
-  //    -Do offset % BLOCKSIZE 
-  //      -If = 0, then all data blocks are full, need to allocate blocks
-  //      -If != 0, then all data blocks are not full
-
 
   //To know which data block to insert into, do offset / BLOCK_SIZE
   //To know where in the data block to insert into, do offset % BLOCK_SIZE
   int offset = file_inode.size;
+  int location = offset;
   int data_block_index = offset / BLOCK_SIZE;
-  // printf("Offset: %i\n", offset);
-  // printf("data_block_index: %i\n", data_block_index);
   BLOCK data_block;
   if(offset != 0) //If there is data present, load the data
     vdisk_read_block(file_inode.data[data_block_index], &data_block);
@@ -933,96 +909,22 @@ int oufs_fwrite(OUFILE *fp, unsigned char* buf, int len){
       data_block_index = offset / BLOCK_SIZE; //Gets the location in the inode where this block will be placed
       BLOCK_REFERENCE bf = oufs_allocate_new_block();
       file_inode.data[data_block_index] = bf; //Places the new data block in the inode
-      // oufs_write_inode_by_reference(file_inode_reference, &file_inode); //Writes the inode back to the disk
-      // vdisk_read_block(file_inode.data[data_block_index], &data_block); //Reads the block 
     }
+    //If more chars need to be written, write them to the correct place
     if(i < len){
       data_block.data.data[offset % BLOCK_SIZE] = buf[i];
       ++offset;
+      ++location;
     }
+    //All of chars have been written, now write 0s
     else {
-      printf("%i\n", offset % BLOCK_SIZE);
-      data_block.data.data[offset % BLOCK_SIZE] = 0;
-      ++offset;
+      data_block.data.data[location % BLOCK_SIZE] = 0;
+      ++location;
     }
   }
   file_inode.size += len;
   oufs_write_inode_by_reference(file_inode_reference, &file_inode);
   vdisk_write_block(file_inode.data[data_block_index], &data_block); 
-//   int full_size = file_inode.size + len;
-//   int num_used_data_blocks;
-//   int num_total_blocks;
-//   int num_new_needed_blocks;
-//   int offset = fp->offset;
-
-//   if((file_inode.size % BLOCK_SIZE) != 0)
-//     num_used_data_blocks = (file_inode.size / BLOCK_SIZE) + 1;
-//   else
-//     num_used_data_blocks = file_inode.size / BLOCK_SIZE;
-
-//   if((full_size % BLOCK_SIZE) != 0)
-//     num_total_blocks = (full_size / BLOCK_SIZE) + 1;
-//   else
-//     num_total_blocks = full_size / BLOCK_SIZE;
-
-// //---------------Getting block to write data to, allocating new one if necessary------------//
-//   for(int i = 0; i < num_data_blocks; ++i){
-//     BLOCK data_block;
-//     BLOCK_REFERENCE data_block_reference = file_inode.data[i];
-//     int in_new_block = 0;
-//     if(data_block_reference == UNALLOCATED_BLOCK){
-//       data_block_reference = oufs_allocate_new_block();
-//       vdisk_read_block(data_block_reference, &data_block);
-//     }
-//     else{
-//       vdisk_read_block(file_inode.data[i], &data_block);
-//     }
-// //------------------------------------------------------------------------------------------//
-//   }
-
-  // for(int i = 0; i < len; ++i){
-  //   for(int j = 0; j < num_data_blocks; ++j){
-  //     BLOCK data_block;
-  //     if(file_inode.data[j] == UNALLOCATED_BLOCK){
-  //       oufs_allocate_new_block(file_inode.data[j], &data_block);
-  //     }
-  //     else{
-  //       vdisk_read_block(file_inode.data[j], &data_block);
-  //     }
-  //   }
-  // }
-
-
-
-
-
-  // //Allocate new data block
-  // BLOCK_REFERENCE data_block_reference = oufs_allocate_new_block();
-  // BLOCK data_block;
-  // vdisk_read_block(data_block_reference, &data_block);
-
-  // //Write buf to that data block
-  // //TODO: if length is greater than BLOCK_SIZE, must allocate a new block
-  // int index = 0;
-  // for(index = 0; index < len; ++index){
-  //   data_block.data.data[index] = buf[index];
-  // }
-
-  // //Store the data block reference inside the inode
-  // for(int i = 0; i < BLOCKS_PER_INODE; ++i){
-  //   if(file_inode.data[i] == UNALLOCATED_BLOCK){
-  //     file_inode.data[i] = data_block_reference; 
-  //     break;
-  //   }
-  // }
-  // file_inode.size += len;
-  // fp->offset =  file_inode.size; 
-
-  // //Mark data block as allocated inside master block (already done in oufs_allocate_new_block())
-
-  // //Write changes back to disk
-  // oufs_write_inode_by_reference(file_inode_reference, &file_inode);
-  // vdisk_write_block(data_block_reference, &data_block);
 }
 
 int oufs_fread(OUFILE *fp, unsigned char* buf, int len){
@@ -1050,6 +952,7 @@ int oufs_fread(OUFILE *fp, unsigned char* buf, int len){
       }
     }
   }
+  return 0;
 }
 
 int oufs_remove(char *cwd, char* path){
