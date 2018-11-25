@@ -17,7 +17,6 @@ int main(int argc, char** argv) {
     // Make the specified directory
     OUFILE* oufile = malloc(sizeof(*oufile));
     oufile = oufs_fopen(cwd, argv[1], 't');
-    printf("OUFILE inode reference: %i\n", oufile->inode_reference);
     free(oufile);
 
     // Clean up
