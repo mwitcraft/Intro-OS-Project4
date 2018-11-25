@@ -925,7 +925,7 @@ int oufs_fwrite(OUFILE *fp, unsigned char* buf, int len){
   if(offset != 0) //If there is data present, load the data
     vdisk_read_block(file_inode.data[data_block_index], &data_block);
 
-  for(int i = 0; i < len; ++i){
+  for(int i = 0; i < BLOCK_SIZE; ++i){
     if(offset % BLOCK_SIZE == 0){ //At the end of a block, need to allocate new block
       if(offset != 0)
         vdisk_write_block(file_inode.data[data_block_index], &data_block); //Writes the full data block back to the disk
@@ -936,8 +936,15 @@ int oufs_fwrite(OUFILE *fp, unsigned char* buf, int len){
       // oufs_write_inode_by_reference(file_inode_reference, &file_inode); //Writes the inode back to the disk
       // vdisk_read_block(file_inode.data[data_block_index], &data_block); //Reads the block 
     }
-    data_block.data.data[offset % BLOCK_SIZE] = buf[i];
-    ++offset;
+    if(i < len){
+      data_block.data.data[offset % BLOCK_SIZE] = buf[i];
+      ++offset;
+    }
+    else {
+      printf("%i\n", offset % BLOCK_SIZE);
+      data_block.data.data[offset % BLOCK_SIZE] = 0;
+      ++offset;
+    }
   }
   file_inode.size += len;
   oufs_write_inode_by_reference(file_inode_reference, &file_inode);
@@ -1041,6 +1048,69 @@ int oufs_fread(OUFILE *fp, unsigned char* buf, int len){
       for(int j = 0; j < BLOCK_SIZE; ++j){
         printf("%c", b.data.data[j]);
       }
+    }
+  }
+}
+
+int oufs_remove(char *cwd, char* path){
+  INODE_REFERENCE parent_ref;
+  INODE_REFERENCE child_ref;
+  char local_name[MAX_PATH_LENGTH];
+  char ret;
+  if((ret = oufs_find_file(cwd, path, &parent_ref, &child_ref, local_name)) < -1){
+    return -1;
+  }
+
+  if(child_ref != UNALLOCATED_INODE){
+    //Remove entry from parent's data block
+    INODE parent_inode;
+    oufs_read_inode_by_reference(parent_ref, &parent_inode);
+
+    //Step through the parents directory block to remove the entry
+    for(int i = 0; i < BLOCKS_PER_INODE; ++i){
+      if(parent_inode.data[i] != UNALLOCATED_BLOCK){
+        BLOCK b;
+        vdisk_read_block(parent_inode.data[i], &b);
+        for(int j = 0; j < DIRECTORY_ENTRIES_PER_BLOCK; ++j){ //Load individual directory blocks
+          if(!strcmp(b.directory.entry[j].name, local_name)){ //If entry matches the target
+            strncpy(b.directory.entry[j].name, "", 1); //Set name to empty
+            b.directory.entry[j].inode_reference = UNALLOCATED_INODE; //Mark inode as unallocated in parent
+            vdisk_write_block(parent_inode.data[i], &b); //Write changes back to disk
+            --parent_inode.size; //Decrement the parent's size
+            oufs_write_inode_by_reference(parent_ref, &parent_inode); //Write changes back to disk
+          }
+        }
+      }
+    }
+    
+    //Decrement n_references in inode
+    INODE child_inode;
+    oufs_read_inode_by_reference(child_ref, &child_inode);
+    --child_inode.n_references;
+    oufs_write_inode_by_reference(child_ref, &child_inode);
+
+    //If n_references is now 0, the inode and all associated data blocks are deallocated
+    if(child_inode.n_references == 0){
+      BLOCK master;
+      vdisk_read_block(MASTER_BLOCK_REFERENCE, &master);
+      //Step through all the data blocks and emtpy
+      for(int i = 0; i < BLOCKS_PER_INODE; ++i){
+        if(child_inode.data[i] != UNALLOCATED_BLOCK){
+          BLOCK b;
+          vdisk_read_block(child_inode.data[i], &b);
+          for(int j = 0; j < BLOCK_SIZE; ++j){ //Empty entire block
+            b.data.data[j] = 0; 
+          }
+          vdisk_write_block(child_inode.data[i], &b); //Write emtpy block back to disk
+          master.master.block_allocated_flag[child_inode.data[i] / 8] &= ~(1 << (child_inode.data[i] % 8)); //Mark block as unallocated in master
+        }
+      }
+      //Deallocate inode
+      child_inode.type = IT_NONE;
+      child_inode.size = 0;
+      oufs_write_inode_by_reference(child_ref, &child_inode); //Write emtpy inode back to disk
+      master.master.inode_allocated_flag[child_ref / 8] &= ~(1 << (child_ref % 8)); //Mark inode as unallocated in master block
+      vdisk_write_block(MASTER_BLOCK_REFERENCE, &master); //Write master block back to disk
     }
   }
 }
