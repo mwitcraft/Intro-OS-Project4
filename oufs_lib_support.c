@@ -1079,6 +1079,8 @@ int oufs_link(char* cwd, char *path_src, char* path_dst){
               vdisk_write_block(ref, &block);
               ++dst_parent_inode.size;
               oufs_write_inode_by_reference(dst_parent_ref, &dst_parent_inode);
+              ++src_file_inode.n_references;
+              oufs_write_inode_by_reference(src_file_inode_ref, &src_file_inode);
               return 0;
             }
           }
