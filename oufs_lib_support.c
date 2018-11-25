@@ -1046,46 +1046,70 @@ int oufs_fread(OUFILE *fp, unsigned char* buf, int len){
 }
 
 int oufs_link(char* cwd, char *path_src, char* path_dst){
-  //Opens source OUFILE 
-  OUFILE* src_file;
-  src_file = oufs_fopen(cwd, path_src, 'r');
-  INODE_REFERENCE src_file_inode_ref = src_file->inode_reference;
-  INODE src_file_inode;
-  oufs_read_inode_by_reference(src_file_inode_ref, &src_file_inode);
-
-  //Gets destination file information
-  INODE_REFERENCE dst_parent_ref;
-  INODE_REFERENCE dst_child_ref;
-  char local_name[MAX_PATH_LENGTH];
-  int ret;
-  if((ret = oufs_find_file(cwd, path_dst, &dst_parent_ref, &dst_child_ref, local_name)) < -1){
+  //Checking if source exists
+  INODE_REFERENCE src_parent_ref;
+  INODE_REFERENCE src_child_ref;
+  char src_local_name[MAX_PATH_LENGTH];
+  int src_ret;
+  if((src_ret = oufs_find_file(cwd, path_src, &src_parent_ref, &src_child_ref, src_local_name)) < -1){
     return -1;
   }
 
-  if(dst_parent_ref != UNALLOCATED_INODE && dst_child_ref == UNALLOCATED_INODE){
-    INODE dst_parent_inode;
-    if(oufs_read_inode_by_reference(dst_parent_ref, &dst_parent_inode))
+  INODE src_child_inode;
+  if(src_child_ref != UNALLOCATED_INODE){
+    oufs_read_inode_by_reference(src_child_ref, &src_child_inode);
+  }
+  
+  //If the source does exist
+  if(src_child_inode.type == IT_FILE){
+    //Opens source OUFILE 
+    OUFILE* src_file;
+    src_file = oufs_fopen(cwd, path_src, 'r');
+    INODE_REFERENCE src_file_inode_ref = src_file->inode_reference;
+    INODE src_file_inode;
+    oufs_read_inode_by_reference(src_file_inode_ref, &src_file_inode);
+
+    //Gets destination file information
+    INODE_REFERENCE dst_parent_ref;
+    INODE_REFERENCE dst_child_ref;
+    char local_name[MAX_PATH_LENGTH];
+    int ret;
+    if((ret = oufs_find_file(cwd, path_dst, &dst_parent_ref, &dst_child_ref, local_name)) < -1){
       return -1;
-    if(dst_parent_inode.type == IT_DIRECTORY){
-      for(int i = 0; i < BLOCKS_PER_INODE; ++i){
-        if(dst_parent_inode.data[i] != UNALLOCATED_BLOCK){
-          BLOCK_REFERENCE ref = dst_parent_inode.data[i];
-          BLOCK block;
-          vdisk_read_block(ref, &block);
-          for(int j = 0; j < DIRECTORY_ENTRIES_PER_BLOCK; ++j){
-            if(block.directory.entry[j].inode_reference == UNALLOCATED_INODE){
-              strncpy(block.directory.entry[j].name, local_name, strlen(local_name));
-              block.directory.entry[j].inode_reference = src_file->inode_reference;
-              vdisk_write_block(ref, &block);
-              ++dst_parent_inode.size;
-              oufs_write_inode_by_reference(dst_parent_ref, &dst_parent_inode);
-              ++src_file_inode.n_references;
-              oufs_write_inode_by_reference(src_file_inode_ref, &src_file_inode);
-              return 0;
+    }
+
+    //Links the destination to the source's inode
+    if(dst_parent_ref != UNALLOCATED_INODE && dst_child_ref == UNALLOCATED_INODE){
+      INODE dst_parent_inode;
+      if(oufs_read_inode_by_reference(dst_parent_ref, &dst_parent_inode))
+        return -1;
+      if(dst_parent_inode.type == IT_DIRECTORY){
+        for(int i = 0; i < BLOCKS_PER_INODE; ++i){
+          if(dst_parent_inode.data[i] != UNALLOCATED_BLOCK){
+            BLOCK_REFERENCE ref = dst_parent_inode.data[i];
+            BLOCK block;
+            vdisk_read_block(ref, &block);
+            for(int j = 0; j < DIRECTORY_ENTRIES_PER_BLOCK; ++j){
+              if(block.directory.entry[j].inode_reference == UNALLOCATED_INODE){
+                strncpy(block.directory.entry[j].name, local_name, strlen(local_name));
+                block.directory.entry[j].inode_reference = src_file->inode_reference;
+                vdisk_write_block(ref, &block);
+                ++dst_parent_inode.size;
+                oufs_write_inode_by_reference(dst_parent_ref, &dst_parent_inode);
+                ++src_file_inode.n_references;
+                oufs_write_inode_by_reference(src_file_inode_ref, &src_file_inode);
+                return 0;
+              }
             }
           }
         }
       }
     }
   }
+  //Reaches only if the arguments are incorrect
+  fprintf(stderr, "Invalid zlink arguments\n");
+  fprintf(stderr, "Usage: ./zlink <existing> <new_name>\n");
+  fprintf(stderr, "\t 'existing' must exist and be a file\n");
+  fprintf(stderr, "\t 'new_name' must not exist and parent must be an existing directory\n");
+  return -1;
 }
