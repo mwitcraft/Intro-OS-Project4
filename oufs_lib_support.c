@@ -901,7 +901,17 @@ int oufs_fwrite(OUFILE *fp, unsigned char* buf, int len){
   if(offset != 0) //If there is data present, load the data
     vdisk_read_block(file_inode.data[data_block_index], &data_block);
 
-  for(int i = 0; i < BLOCK_SIZE; ++i){
+  //Gets total number of blocks after adding buf 
+  int total_size = file_inode.size + len;
+  int num_data_blocks;
+  if(total_size % BLOCK_SIZE == 0)
+    num_data_blocks = total_size / BLOCK_SIZE;
+  else
+    num_data_blocks = total_size / BLOCK_SIZE + 1;
+
+  //Must always start at 0 
+  int buf_index = 0;
+  for(int i = file_inode.size; i < num_data_blocks * BLOCK_SIZE; ++i){
     if(offset % BLOCK_SIZE == 0){ //At the end of a block, need to allocate new block
       if(offset != 0)
         vdisk_write_block(file_inode.data[data_block_index], &data_block); //Writes the full data block back to the disk
@@ -911,8 +921,9 @@ int oufs_fwrite(OUFILE *fp, unsigned char* buf, int len){
       file_inode.data[data_block_index] = bf; //Places the new data block in the inode
     }
     //If more chars need to be written, write them to the correct place
-    if(i < len){
-      data_block.data.data[offset % BLOCK_SIZE] = buf[i];
+    if(i < total_size){
+      data_block.data.data[offset % BLOCK_SIZE] = buf[buf_index];
+      ++buf_index;
       ++offset;
       ++location;
     }
@@ -922,6 +933,7 @@ int oufs_fwrite(OUFILE *fp, unsigned char* buf, int len){
       ++location;
     }
   }
+  vdisk_write_block(file_inode.data[data_block_index], &data_block);
   file_inode.size += len;
   oufs_write_inode_by_reference(file_inode_reference, &file_inode);
   vdisk_write_block(file_inode.data[data_block_index], &data_block); 
