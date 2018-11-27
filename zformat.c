@@ -9,27 +9,32 @@
 int initialize_disk();
 int initalize_master_block();
 int initialize_first_inode();
+int initialize_other_inodes();
 int initialize_first_directory();
 
 int main(int argc, char** argv){
   //Write 0s to all bytes in virtual disk
   if(initialize_disk() == -1){
-    fprintf(stderr, "ERROR WRITING 0s TO DISK");
+    fprintf(stderr, "ERROR WRITING 0s TO DISK\n");
   }
 
   //Marks master block, all inode blocks, and the first data block as allocated
   if(initalize_master_block() == -1){
-    fprintf(stderr, "ERROR INITIALIZING MASTER BLOCK");
+    fprintf(stderr, "ERROR INITIALIZING MASTER BLOCK\n");
   }
 
   //Makes the first inode correspond to the root directory
   if(initialize_first_inode() == -1){
-    fprintf(stderr, "ERROR INITIALIZING FIRST INODE");
+    fprintf(stderr, "ERROR INITIALIZING FIRST INODE\n");
+  }
+
+  if(initialize_other_inodes() == -1){
+    fprintf(stderr, "ERROR INITIALIZING OTHER INODES\n");
   }
 
   //Makes first data block an empty directory, with '.' and '..' both referring to inode 0
   if(initialize_first_directory() == -1){
-    fprintf(stderr, "ERROR CREATING FIRST DATA BLOCK");
+    fprintf(stderr, "ERROR CREATING FIRST DATA BLOCK\n");
   }
 }
 
@@ -91,6 +96,21 @@ int initialize_first_inode(){
     }
 
     return 0;
+}
+
+//Marks all inodes other than the first one as type: IT_NONE, n_references: 0, all data blocks: UNALLOCATED_BLOCK, size: 0
+int initialize_other_inodes(){
+  //Steps through all inodes other than first one
+  for(int i = 1; i < N_INODES; ++i){
+    INODE inode;
+    oufs_read_inode_by_reference(i, &inode); //Loads inode
+    inode.type = IT_NONE; //Sets type
+    inode.n_references = 0;
+    for(int j = 0; j < BLOCKS_PER_INODE; ++j)//Steps through all data blocks
+      inode.data[j] = UNALLOCATED_BLOCK; //Sets each as UNALLOCATED
+    inode.size = 0;
+    oufs_write_inode_by_reference(i, &inode); //Writes inode to disk
+  }
 }
 
 // This function is basically the same as 'oufs_clean_directory_block', but it's working
