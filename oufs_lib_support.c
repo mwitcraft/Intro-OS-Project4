@@ -28,10 +28,10 @@ void oufs_get_environment(char *cwd, char *disk_name) {
   str = getenv("ZDISK");
   if (str == NULL) {
     // Default
-    strcpy(disk_name, "vdisk1");
+    strncpy(disk_name, "vdisk1", strlen("vdisk1"));
   } else {
     // Exists: copy
-    strncpy(disk_name, str, MAX_PATH_LENGTH - 1);
+    strncpy(disk_name, str, strlen(str));
   }
 }
 

@@ -34,10 +34,16 @@ int main(int argc, char** argv){
 }
 
 int initialize_disk(){
+    char* cwd = malloc(sizeof(char) * MAX_PATH_LENGTH);
+    char* disk_name = malloc(sizeof(char) * MAX_PATH_LENGTH);
+    oufs_get_environment(cwd, disk_name);
 
     // Creates a virtual disk with name 'vdisk1'
-    if(vdisk_disk_open("vdisk1") != 0)
+    if(vdisk_disk_open(disk_name) != 0)
       return -1;
+
+    free(cwd);
+    free(disk_name);
 
     // Steps through all bytes in disk and sets to 0
     for(int num_block = 0; num_block < N_BLOCKS_IN_DISK; ++num_block){ //Steps through each block
