@@ -413,10 +413,10 @@ int oufs_rmdir(char *cwd, char *path) {
     }
 
     // Go to that specific inode and 0 everything out
-    inodeBlock.inodes.inode[index].type = 0;
+    inodeBlock.inodes.inode[index].type = IT_NONE;
     inodeBlock.inodes.inode[index].n_references = 0;
     for (int i = 0; i < BLOCKS_PER_INODE; ++i) {
-      inodeBlock.inodes.inode[index].data[i] = 0;
+      inodeBlock.inodes.inode[index].data[i] = UNALLOCATED_BLOCK;
     }
     inodeBlock.inodes.inode[index].size = 0;
 
