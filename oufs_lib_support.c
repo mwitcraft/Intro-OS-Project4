@@ -161,13 +161,12 @@ INODE_REFERENCE oufs_allocate_new_directory(INODE_REFERENCE parent) {
   vdisk_read_block(MASTER_BLOCK_REFERENCE, &masterBlock);
   int b_byte;
   int flag;
-  for (b_byte = 0, flag = 1; flag && b_byte < INODES_PER_BLOCK; ++b_byte) {
+  for (b_byte = 0, flag = 1; flag && b_byte < N_INODE_BLOCKS / 8; ++b_byte) {
     if (masterBlock.master.inode_allocated_flag[b_byte] != 0xff) {
       flag = 0;
       break;
     }
   }
-
   int b_bit =
       oufs_find_open_bit(masterBlock.master.inode_allocated_flag[b_byte]);
   INODE_REFERENCE self = (b_byte << 3) + b_bit;
@@ -199,7 +198,7 @@ INODE_REFERENCE oufs_allocate_new_directory(INODE_REFERENCE parent) {
   int bit = self % INODES_PER_BLOCK;
   BLOCK master;
   vdisk_read_block(0, &master);
-  master.master.inode_allocated_flag[byte - 1] |= (1 << (bit));
+  master.master.inode_allocated_flag[b_byte] |= (1 << (b_bit));
   vdisk_write_block(0, &master);
 
   return self;
