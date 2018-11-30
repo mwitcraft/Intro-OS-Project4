@@ -22,4 +22,4 @@ more:
 link:
 	gcc zlink.c oufs_lib_support.c vdisk.c -o zlink
 clean:
-	rm zformat zfilez zinspect zmkdir zrmdir ztouch zappend zcreate zmore zlink
+	rm zformat zfilez zinspect zmkdir zrmdir ztouch zappend zcreate zmore zlink zremove
